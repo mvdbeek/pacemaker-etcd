@@ -83,7 +83,7 @@ class PcsEtcdArgs(object):
         args = parser.parse_args(sys.argv[2:])
         CreateCluster(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
-    def request_join(self):
+    def join(self):
         parser = argparse.ArgumentParser(
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
             parents=self.parents,
