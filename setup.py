@@ -9,5 +9,6 @@ setup(name='pacemaker-etcd',
       author_email='m.vandenbeek@gmail.com',
       url='https://github.com/mvdbeek/pacemaker-etcd/',
       py_modules=['etcd_management', 'pcs_cmds', 'pcs_etcd'],
+      scripts=["pcs-etcd"],
       install_requires=["python-etcd"],
       )
