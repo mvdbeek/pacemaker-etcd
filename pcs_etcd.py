@@ -1,9 +1,23 @@
 import argparse
+import os
 import sys
 
 from etcd_management import Authorizer
 from etcd_management import AuthorizationRequest
 from etcd_management import CreateCluster
+
+
+class EnvDefault(argparse.Action):
+    def __init__(self, envvar, required=True, default=None, **kwargs):
+        if not default and envvar:
+            if envvar in os.environ:
+                default = os.environ[envvar]
+        if required and default:
+            required = False
+        super(EnvDefault, self).__init__(default=default, required=required, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, values)
 
 
 class PcsEtcdArgs(object):
@@ -31,7 +45,11 @@ class PcsEtcdArgs(object):
 
     def _parentparser(self):
         parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument('etcd_nodes', type=self.hosts, help='Etcd cluster connection, e.g 127.0.0.1:4001')
+        parser.add_argument('--etcd_nodes', type=self.hosts,
+                            action=EnvDefault, envvar="ETCD",
+                            help='Etcd cluster connection, e.g 127.0.0.1:4001')
+        parser.add_argument('--my_ip', action=EnvDefault, envvar="MY_IP",
+                            help='IP of current node to join pacemaker cluster')
         parser.add_argument('--protocol', default='http', help='Protocol to use to connect to etcd')
         parser.add_argument('--prefix', default="/hacluster", help='prefix for etcd directory'),
         return parser
