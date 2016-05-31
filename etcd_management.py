@@ -7,8 +7,10 @@ from pcs_cmds import bootstrap_cluster
 from pcs_cmds import change_pass
 from pcs_cmds import join_cluster
 
-log = logging.getLogger("pcs-etcd")
+log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+log.addHandler(ch)
 
 class EtcdBase(object):
 
@@ -119,16 +121,15 @@ class Authorizer(EtcdBase):
                 log.info("newnode changed to %s" % self.watch.result.value)
                 lock = etcd.Lock(self.client, self.watch.result.value)
                 lock.acquire(timeout=120)
-                if lock.is_acquired():
-                    try:
-                        authorize_new_node(lock.value, self.user, self.password)
-                        lock.release()
-                        self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
-                        self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
-                    except subprocess.CalledProcessError as e:
-                        log.error(e)
-                        lock.release()
-                        continue
+                try:
+                    authorize_new_node(lock.value, self.user, self.password)
+                    lock.release()
+                    self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
+                    self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
+                except subprocess.CalledProcessError as e:
+                    log.error(e)
+                    lock.release()
+                    continue
         else:
             raise Exception("Could not start watcher, node is not member of cluster")
 
