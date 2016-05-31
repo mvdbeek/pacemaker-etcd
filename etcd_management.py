@@ -64,7 +64,7 @@ class AuthorizationRequest(EtcdBase):
             newnode = self.client.write(key=self.key, value="").value
         if newnode == "":
             self.client.write(key=self.key, value=self.ip, ttl=120)
-            self.client.write(key="%s/%s" % (self.prefix, self.host.ip), value='False', ttl=120)
+            self.client.write(key="%s/%s" % (self.prefix, self.ip), value='False', ttl=120)
         elif newnode != "":
             if self.count > 120:
                 raise Exception("Could not authorize node {ip} within 2 minutes".format(ip=self.ip))
