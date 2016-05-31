@@ -59,12 +59,14 @@ class AuthorizationRequest(EtcdBase):
         try:
             success = self.wait_for_request()
         except etcd.EtcdWatchTimedOut:
+            log.error("Request timed out")
             self.client.write(key=self.key, value="None").value  # TODO: replace this logic with a lock, may result in race condition
             self.client.delete(key="%s/%s" % (self.prefix, self.ip))
             raise
         if success:
             join_cluster(user=self.user, password=self.password)
             self.add_to_nodelist()
+            log.info("Succesfully joined cluster")
 
     def make_request(self):
         self.count += 1
@@ -85,8 +87,8 @@ class AuthorizationRequest(EtcdBase):
         return True
 
     def wait_for_request(self):
-        self.count += 1
-        watch = EtcdWatch(watch_key="%s/%s" % (self.prefix, self.ip),
+        log.info("Waiting for approval of IP")
+        watch = EtcdWatch(watch_key=self.ip,
                           timeout=300,
                           ip=self.ip,
                           host=self.host,
