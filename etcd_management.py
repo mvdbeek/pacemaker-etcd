@@ -70,6 +70,9 @@ class AuthorizationRequest(EtcdBase):
                 raise Exception("Could not authorize node {ip} within 2 minutes".format(ip=self.ip))
             time.sleep(1)
             self.make_request()
+        elif newnode == self.ip:
+            return True
+        return True
 
     def wait_for_request(self):
         self.count += 1
