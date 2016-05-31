@@ -51,7 +51,12 @@ class AuthorizationRequest(EtcdBase):
         self.key = "{prefix}/{key}".format(prefix=self.prefix, key="newnode")
         self.count = 0
         self.make_request()
-        success = self.wait_for_request()
+        try:
+            success = self.wait_for_request()
+        except etcd.EtcdWatchTimedOut:
+            self.client.write(key=self.key, value="").value  # TODO: replace this logic with a lock, may result in race condition
+            self.client.delete(key="%s/%s" % (self.prefix, self.ip))
+            raise
         if success:
             join_cluster(user=self.user, password=self.password)
             self.add_to_nodelist()
