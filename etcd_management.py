@@ -1,5 +1,5 @@
 import etcd
-import os
+import logging
 import time
 import subprocess
 from pcs_cmds import authorize_new_node
@@ -7,6 +7,8 @@ from pcs_cmds import bootstrap_cluster
 from pcs_cmds import change_pass
 from pcs_cmds import join_cluster
 
+log = logging.getLogger("pcs-etcd")
+log.setLevel(logging.INFO)
 
 class EtcdBase(object):
 
@@ -106,6 +108,7 @@ class Authorizer(EtcdBase):
         EtcdBase.__init__(self, **kwargs)
         if self.am_member():
             while True:
+                log.info("looking for newnode changes")
                 self.watch = EtcdWatch(watch_key='newnode',
                                        ip=self.ip,
                                        host=self.host,
@@ -113,21 +116,19 @@ class Authorizer(EtcdBase):
                                        prefix=self.prefix)
                 if self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
                     continue
-                try:
-                    with etcd.Lock(self.client, "" % self.watch.result.value) as lock:
-                        lock.acquire(timeout=120)
-                        if lock.is_acquired():
-                            try:
-                                authorize_new_node(lock.value, self.user, self.password)
-                                lock.release()
-                                self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
-                                self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
-                            except subprocess.CalledProcessError:
-                                # TODO: log this
-                                lock.release()
-                                continue
-                except Exception:  # TODO: change this to a more specific exception (timeout?)
-                    continue
+                log.info("newnode changed to %s" % self.watch.result.value)
+                lock = etcd.Lock(self.client, self.watch.result.value)
+                lock.acquire(timeout=120)
+                if lock.is_acquired():
+                    try:
+                        authorize_new_node(lock.value, self.user, self.password)
+                        lock.release()
+                        self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
+                        self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
+                    except subprocess.CalledProcessError as e:
+                        log.error(e)
+                        lock.release()
+                        continue
         else:
             raise Exception("Could not start watcher, node is not member of cluster")
 
