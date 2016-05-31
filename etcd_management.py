@@ -55,7 +55,7 @@ class AuthorizationRequest(EtcdBase):
         try:
             success = self.wait_for_request()
         except etcd.EtcdWatchTimedOut:
-            self.client.write(key=self.key, value="").value  # TODO: replace this logic with a lock, may result in race condition
+            self.client.write(key=self.key, value="None").value  # TODO: replace this logic with a lock, may result in race condition
             self.client.delete(key="%s/%s" % (self.prefix, self.ip))
             raise
         if success:
@@ -67,8 +67,8 @@ class AuthorizationRequest(EtcdBase):
         try:
             newnode = self.client.read(self.key).value
         except etcd.EtcdKeyNotFound:
-            newnode = self.client.write(key=self.key, value="").value
-        if newnode == "":
+            newnode = self.client.write(key=self.key, value="None").value
+        if newnode == "None":
             self.client.write(key=self.key, value=self.ip, ttl=120)
             self.client.write(key="%s/%s" % (self.prefix, self.ip), value='False', ttl=120)
         elif newnode != "":
@@ -113,13 +113,13 @@ class Authorizer(EtcdBase):
                                        prefix=self.prefix)
                 if self.watch.result.value == '':  # This is the default key value when no hosts are to be added.
                     continue
-                with etcd.Lock(self.client, 'newnode') as lock:
+                with etcd.Lock(self.client, "%s/newnode" % self.prefix) as lock:
                     lock.acquire(timeout=120)
                     if lock.is_acquired():
                         try:
                             authorize_new_node(lock.value, self.user, self.password)
                             lock.release()
-                            self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="")
+                            self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
                             self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
                         except subprocess.CalledProcessError:
                             # TODO: log this
