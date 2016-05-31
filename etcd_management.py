@@ -122,7 +122,7 @@ class Authorizer(EtcdBase):
                 lock = etcd.Lock(self.client, self.watch.result.value)
                 lock.acquire(lock_ttl=60)
                 try:
-                    authorize_new_node(lock.value, self.user, self.password)
+                    authorize_new_node(self.watch.result.value, self.user, self.password)
                     lock.release()
                     self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
                     self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
