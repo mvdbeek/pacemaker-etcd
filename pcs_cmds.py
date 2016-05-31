@@ -16,7 +16,14 @@ def bootstrap_cluster(user, password, node, name='Master'):
 
 def authorize_new_node(user, password, node):
     _auth(user, password, node)
-    _add(node)
+    try:
+        _add(node)
+    except subprocess.CalledProcessError as e:
+        if "node is already in a cluster" in e.output:
+            _remove(node)
+            _add(node)
+        else:
+            raise
     return True
 
 
@@ -46,7 +53,12 @@ def _auth(user, password, node=None):
 
 def _add(node):
     add = ['pcs', 'cluster', 'node', 'add', node]
-    return subprocess.check_output(add)
+    return subprocess.check_output(add, stderr=subprocess.STDOUT)
+
+
+def _remove(node):
+    remove = ["pcs", "cluster", "node", "remove", node ]
+    return subprocess.check_output(remove)
 
 
 def _setup(name, node):
