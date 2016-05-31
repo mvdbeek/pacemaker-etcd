@@ -7,16 +7,13 @@ from pcs_cmds import bootstrap_cluster
 from pcs_cmds import join_cluster
 
 
-class CurrentHost(object):
-
-    def __init__(self):
-        self.ip = os.getenv("MY_IP", None)
-
-
 class EtcdBase(object):
 
     def __init__(self, host, protocol, allow_redirect=True, prefix="/hacluster"):
-        self.host = CurrentHost()
+        self.ip = os.getenv("MY_IP", None)
+        self.host = host
+        self.protocol = protocol
+        self.prefix = prefix
         self.client = etcd.Client(host=host, protocol=protocol, allow_reconnect=True, allow_redirect=allow_redirect)
         self.prefix = prefix
 
@@ -33,7 +30,7 @@ class EtcdBase(object):
         return self.client.read("{prefix}/password".format(prefix=self.prefix)).value
 
     def am_member(self):
-        if self.host.ip in self.nodelist:
+        if self.ip in self.nodelist:
             return True
         else:
             return False
@@ -62,27 +59,31 @@ class AuthorizationRequest(EtcdBase):
     def make_request(self):
         self.count += 1
         try:
-            newnode = self.client.read(self.key)
+            newnode = self.client.read(self.key).value
         except etcd.EtcdKeyNotFound:
-            newnode = self.client.write(key=self.key, value="")
+            newnode = self.client.write(key=self.key, value="").value
         if newnode == "":
-            self.client.write(key=self.key, value=self.host.ip, ttl=120)
+            self.client.write(key=self.key, value=self.ip, ttl=120)
             self.client.write(key="%s/%s" % (self.prefix, self.host.ip), value='False', ttl=120)
         elif newnode != "":
             if self.count > 120:
-                raise Exception("Could not authorize node {ip} within 2 minutes".format(ip=self.host.ip))
+                raise Exception("Could not authorize node {ip} within 2 minutes".format(ip=self.ip))
             time.sleep(1)
             self.make_request()
 
     def wait_for_request(self):
         self.count += 1
-        watch = EtcdWatch("%s/%s" % (self.prefix, self.host.ip), timeout=300)
+        watch = EtcdWatch(watch_key="%s/%s" % (self.prefix, self.ip),
+                          timeout=300,
+                          host=self.host,
+                          protocol=self.protocol,
+                          prefix=self.prefix)
         if watch.result.value == 'True':
             return True
         return False
 
     def add_to_nodelist(self):
-        nodelist = "%s,%s" % (self.nodelist, self.host.ip)
+        nodelist = "%s,%s" % (self.nodelist, self.ip)
         self.client.write("{prefix}/nodelist", value=nodelist)
 
 
@@ -95,7 +96,10 @@ class Authorizer(EtcdBase):
         EtcdBase.__init__(self, **kwargs)
         if self.am_member():
             while True:
-                self.watch = EtcdWatch('newnode', **kwargs)
+                self.watch = EtcdWatch(watch_key='newnode',
+                                       host=self.host,
+                                       protocol=self.protocol,
+                                       prefix=self.prefix)
                 if self.watch.result.value == '':  # This is the default key value when no hosts are to be added.
                     continue
                 with etcd.Lock(self.client, 'newnode') as lock:
@@ -120,6 +124,6 @@ class CreateCluster(EtcdBase):
 
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)
-        success = bootstrap_cluster(user=self.user, password=self.password, node=self.host.ip)
+        success = bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
         if success:
             self.client.write("%s/nodelist" % self.prefix)
