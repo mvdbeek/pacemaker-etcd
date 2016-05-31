@@ -4,6 +4,7 @@ import time
 import subprocess
 from pcs_cmds import authorize_new_node
 from pcs_cmds import bootstrap_cluster
+from pcs_cmds import change_pass
 from pcs_cmds import join_cluster
 
 
@@ -123,6 +124,25 @@ class Authorizer(EtcdBase):
                             continue
         else:
             raise Exception("Could not start watcher, node is not member of cluster")
+
+
+class WatchPassword(EtcdBase):
+    '''
+    Watches for changes in /password  and updates the password
+    '''
+
+    def __init__(self, **kwargs):
+        EtcdBase.__init__(self, **kwargs)
+        change_pass(self.user, self.password)
+        while True:
+            try:
+                self.watch = EtcdWatch(watch_key='password',
+                                       host=self.host,
+                                       protocol=self.protocol,
+                                       prefix=self.prefix)
+            except etcd.EtcdWatchTimedOut:
+                continue
+            change_pass(self.user, self.password)
 
 
 class CreateCluster(EtcdBase):

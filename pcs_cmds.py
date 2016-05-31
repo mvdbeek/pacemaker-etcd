@@ -1,6 +1,11 @@
 import subprocess
 
 
+def change_pass(user, password):
+    process = subprocess.Popen(['chpasswd'], stdout=subprocess.PIPE, stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+    process.communicate("{user}:{password}".format(user=user, password=password))
+
+
 def bootstrap_cluster(user, password, node, name='Master'):
     _auth(user, password, node)
     _setup(name, node)
