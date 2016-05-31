@@ -10,8 +10,8 @@ from pcs_cmds import join_cluster
 
 class EtcdBase(object):
 
-    def __init__(self, host, protocol, allow_redirect=True, prefix="/hacluster"):
-        self.ip = os.getenv("MY_IP", None)
+    def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster"):
+        self.ip = ip
         self.host = host
         self.protocol = protocol
         self.prefix = prefix
@@ -84,6 +84,7 @@ class AuthorizationRequest(EtcdBase):
         self.count += 1
         watch = EtcdWatch(watch_key="%s/%s" % (self.prefix, self.ip),
                           timeout=300,
+                          ip=self.ip,
                           host=self.host,
                           protocol=self.protocol,
                           prefix=self.prefix)
@@ -106,6 +107,7 @@ class Authorizer(EtcdBase):
         if self.am_member():
             while True:
                 self.watch = EtcdWatch(watch_key='newnode',
+                                       ip=self.ip,
                                        host=self.host,
                                        protocol=self.protocol,
                                        prefix=self.prefix)
@@ -137,6 +139,7 @@ class WatchPassword(EtcdBase):
         while True:
             try:
                 self.watch = EtcdWatch(watch_key='password',
+                                       ip=self.ip,
                                        host=self.host,
                                        protocol=self.protocol,
                                        prefix=self.prefix)

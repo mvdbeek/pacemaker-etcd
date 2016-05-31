@@ -75,7 +75,7 @@ class PcsEtcdArgs(object):
         # now that we're inside a subcommand, ignore the first
         # TWO argvs, ie the command and the subcommand
         args = parser.parse_args(sys.argv[2:])
-        _ = Authorizer(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = Authorizer(ip = args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def watch_pass(self):
         parser = argparse.ArgumentParser(
@@ -83,7 +83,7 @@ class PcsEtcdArgs(object):
             parents=self.parents,
             description='Watch etcd directory for new password')
         args = parser.parse_args(sys.argv[2:])
-        _ = WatchPassword(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = WatchPassword(ip = args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def create(self):
         parser = argparse.ArgumentParser(
@@ -91,7 +91,7 @@ class PcsEtcdArgs(object):
             parents=self.parents,
             description='Create a new cluster from scratch')
         args = parser.parse_args(sys.argv[2:])
-        _ = CreateCluster(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = CreateCluster(ip = args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def join(self):
         parser = argparse.ArgumentParser(
@@ -99,7 +99,7 @@ class PcsEtcdArgs(object):
             parents=self.parents,
             description='Request to join an existing cluster')
         args = parser.parse_args(sys.argv[2:])
-        _ = AuthorizationRequest(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = AuthorizationRequest(ip = args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
 
 if __name__ == '__main__':
