@@ -159,4 +159,4 @@ class CreateCluster(EtcdBase):
         EtcdBase.__init__(self, **kwargs)
         success = bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
         if success:
-            self.client.write("%s/nodelist" % self.prefix)
+            self.client.write("%s/nodelist" % self.prefix, value=self.ip)
