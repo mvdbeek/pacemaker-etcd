@@ -100,7 +100,7 @@ class AuthorizationRequest(EtcdBase):
 
     def add_to_nodelist(self):
         nodelist = "%s,%s" % (self.nodelist, self.ip)
-        self.client.write("{prefix}/nodelist", value=nodelist)
+        self.client.write("{prefix}/nodelist".format(prefix=self.prefix), value=nodelist)
 
 
 class Authorizer(EtcdBase):
@@ -119,7 +119,7 @@ class Authorizer(EtcdBase):
                                            host=self.host,
                                            protocol=self.protocol,
                                            prefix=self.prefix)
-                    if self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
+                    if not self.watch.result.value or self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
                         continue
                     log.info("newnode changed to %s" % self.watch.result.value)
                     lock = etcd.Lock(self.client, self.watch.result.value)
