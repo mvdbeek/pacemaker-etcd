@@ -120,7 +120,8 @@ class Authorizer(EtcdBase):
                     continue
                 log.info("newnode changed to %s" % self.watch.result.value)
                 lock = etcd.Lock(self.client, self.watch.result.value)
-                lock.acquire(timeout=120)
+                lock.acquire(lock_ttl=60)
+                log.info("lock aquired" % self.watch.result.value)
                 try:
                     authorize_new_node(lock.value, self.user, self.password)
                     lock.release()
