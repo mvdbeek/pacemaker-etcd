@@ -50,5 +50,5 @@ def _add(node):
 
 
 def _setup(name, node):
-    setup = ['pcs', 'cluster', 'setup', '-name', name, node]
+    setup = ['pcs', 'cluster', 'setup', '--name', name, node]
     return subprocess.check_output(setup)
