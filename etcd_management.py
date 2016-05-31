@@ -112,25 +112,29 @@ class Authorizer(EtcdBase):
         EtcdBase.__init__(self, **kwargs)
         if self.am_member():
             while True:
-                log.info("looking for newnode changes")
-                self.watch = EtcdWatch(watch_key='newnode',
-                                       ip=self.ip,
-                                       host=self.host,
-                                       protocol=self.protocol,
-                                       prefix=self.prefix)
-                if self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
-                    continue
-                log.info("newnode changed to %s" % self.watch.result.value)
-                lock = etcd.Lock(self.client, self.watch.result.value)
-                lock.acquire(lock_ttl=60)
                 try:
-                    authorize_new_node(user=self.user, password=self.password, node=self.watch.result.value)
-                    lock.release()
-                    self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
-                    self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
-                except subprocess.CalledProcessError as e:
-                    log.error(e)
-                    lock.release()
+                    log.info("looking for newnode changes")
+                    self.watch = EtcdWatch(watch_key='newnode',
+                                           ip=self.ip,
+                                           host=self.host,
+                                           protocol=self.protocol,
+                                           prefix=self.prefix)
+                    if self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
+                        continue
+                    log.info("newnode changed to %s" % self.watch.result.value)
+                    lock = etcd.Lock(self.client, self.watch.result.value)
+                    lock.acquire(lock_ttl=60)
+                    try:
+                        authorize_new_node(user=self.user, password=self.password, node=self.watch.result.value)
+                        lock.release()
+                        self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
+                        self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
+                    except subprocess.CalledProcessError as e:
+                        log.error(e)
+                        lock.release()
+                        continue
+                except etcd.EtcdWatchTimedOut:
+                    log.error("Received Timeout in authorizer module")
                     continue
         else:
             raise Exception("Could not start watcher, node is not member of cluster")
