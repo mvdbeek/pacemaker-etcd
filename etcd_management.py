@@ -113,6 +113,8 @@ class Authorizer(EtcdBase):
                         except subprocess.CalledProcessError:
                             # TODO: log this
                             continue
+        else:
+            raise Exception("Could not start watcher, node is not member of cluster")
 
 
 class CreateCluster(EtcdBase):

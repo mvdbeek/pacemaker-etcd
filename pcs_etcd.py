@@ -37,7 +37,7 @@ class PcsEtcdArgs(object):
         # exclude the rest of the args too, or validation will fail
         args = parser.parse_args(sys.argv[1:2])
         if not hasattr(self, args.command):
-            print 'Unrecognized command'
+            print('Unrecognized command')
             parser.print_help()
             exit(1)
         # use dispatch pattern to invoke method with same name
@@ -73,7 +73,7 @@ class PcsEtcdArgs(object):
         # now that we're inside a subcommand, ignore the first
         # TWO argvs, ie the command and the subcommand
         args = parser.parse_args(sys.argv[2:])
-        Authorizer(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = Authorizer(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def create(self):
         parser = argparse.ArgumentParser(
@@ -81,7 +81,7 @@ class PcsEtcdArgs(object):
             parents=self.parents,
             description='Create a new cluster from scratch')
         args = parser.parse_args(sys.argv[2:])
-        CreateCluster(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = CreateCluster(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def join(self):
         parser = argparse.ArgumentParser(
@@ -89,7 +89,7 @@ class PcsEtcdArgs(object):
             parents=self.parents,
             description='Request to join an existing cluster')
         args = parser.parse_args(sys.argv[2:])
-        AuthorizationRequest(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        _ = AuthorizationRequest(host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
 
 if __name__ == '__main__':
