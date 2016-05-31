@@ -111,19 +111,23 @@ class Authorizer(EtcdBase):
                                        host=self.host,
                                        protocol=self.protocol,
                                        prefix=self.prefix)
-                if self.watch.result.value == '':  # This is the default key value when no hosts are to be added.
+                if self.watch.result.value == 'None':  # This is the default key value when no hosts are to be added.
                     continue
-                with etcd.Lock(self.client, "%s/newnode" % self.prefix) as lock:
-                    lock.acquire(timeout=120)
-                    if lock.is_acquired():
-                        try:
-                            authorize_new_node(lock.value, self.user, self.password)
-                            lock.release()
-                            self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
-                            self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
-                        except subprocess.CalledProcessError:
-                            # TODO: log this
-                            continue
+                try:
+                    with etcd.Lock(self.client, "" % self.watch.result.value) as lock:
+                        lock.acquire(timeout=120)
+                        if lock.is_acquired():
+                            try:
+                                authorize_new_node(lock.value, self.user, self.password)
+                                lock.release()
+                                self.client.write(key="%s/%s" % (self.prefix, "newnode"), value="None")
+                                self.client.write(key="%s/%s" % (self.prefix, self.watch.result.value), value='True')
+                            except subprocess.CalledProcessError:
+                                # TODO: log this
+                                lock.release()
+                                continue
+                except Exception:  # TODO: change this to a more specific exception (timeout?)
+                    continue
         else:
             raise Exception("Could not start watcher, node is not member of cluster")
 
