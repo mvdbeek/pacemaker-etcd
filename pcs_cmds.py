@@ -1,5 +1,13 @@
 import subprocess
 import time
+import logging
+
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+log.addHandler(ch)
+
 
 def change_pass(user, password):
     process = subprocess.Popen(['chpasswd'], stdout=subprocess.PIPE, stdin=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -22,7 +30,8 @@ def authorize_new_node(user, password, node):
     try:
         _add(node)
     except subprocess.CalledProcessError as e:
-        if "node is already in a cluster" in e.output:
+        if "node is already in a cluster" in e.output or "Error connecting to" in e.output:
+            log.info("Removing node from cluster")
             time.sleep(1)
             _remove(node)
             time.sleep(1)
