@@ -53,10 +53,10 @@ def join_cluster(user, password):
 
 def load_config(conf):
     """write conf to file and load with crm util"""
-    tmp = tempfile.NamedTemporaryFile(delete=False)
-    with open(tmp, "w") as conf_file:
-        conf_file.write(tmp)
-    load = ["crm", "configure", "load", "update", conf]
+    tmp = tempfile.NamedTemporaryFile("w", delete=False)
+    tmp.write(conf)
+    tmp.close()
+    load = ["crm", "configure", "load", "update", tmp.name]
     return subprocess.check_output(load)
 
 
