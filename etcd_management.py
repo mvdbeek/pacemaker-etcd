@@ -174,6 +174,7 @@ class CreateCluster(EtcdBase):
         success = bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
         if success:
             self.client.write("%s/nodelist" % self.prefix, value=self.ip)
+            self.load_cib_config()
 
     def load_cib_config(self):
         try:
