@@ -12,6 +12,7 @@ log.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 log.addHandler(ch)
 
+
 class EtcdBase(object):
 
     def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster"):
@@ -20,7 +21,6 @@ class EtcdBase(object):
         self.protocol = protocol
         self.prefix = prefix
         self.client = etcd.Client(host=host, protocol=protocol, allow_reconnect=True, allow_redirect=allow_redirect)
-        self.prefix = prefix
 
     @property
     def user(self):
@@ -108,6 +108,7 @@ class Authorizer(EtcdBase):
     Watches for changes in /newnode and attempts to authorize these (if a lock can be acquired).
     Requires that current host is cluster member
     """
+
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)
         if self.am_member():
@@ -141,9 +142,9 @@ class Authorizer(EtcdBase):
 
 
 class WatchPassword(EtcdBase):
-    '''
+    """
     Watches for changes in /password  and updates the password
-    '''
+    """
 
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)
@@ -161,11 +162,11 @@ class WatchPassword(EtcdBase):
 
 
 class CreateCluster(EtcdBase):
-    '''
+    """
     Explicitly create a new cluster (overwriting any existing nodelist).
     TODO: Set and update TTL on nodelist as long as cluster exists. If nodelist doesn't exist,
     let first client trying to join the cluster use this class.
-    '''
+    """
 
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)

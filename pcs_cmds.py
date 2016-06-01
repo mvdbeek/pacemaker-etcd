@@ -1,5 +1,5 @@
 import subprocess
-
+import time
 
 def change_pass(user, password):
     process = subprocess.Popen(['chpasswd'], stdout=subprocess.PIPE, stdin=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -8,8 +8,11 @@ def change_pass(user, password):
 
 def bootstrap_cluster(user, password, node, name='Master'):
     _auth(user, password, node)
+    time.sleep(1)
     _setup(name, node)
+    time.sleep(1)
     _start()
+    time.sleep(1)
     _enable()
     return True
 
@@ -20,7 +23,9 @@ def authorize_new_node(user, password, node):
         _add(node)
     except subprocess.CalledProcessError as e:
         if "node is already in a cluster" in e.output:
+            time.sleep(1)
             _remove(node)
+            time.sleep(1)
             _add(node)
         else:
             raise
@@ -29,7 +34,9 @@ def authorize_new_node(user, password, node):
 
 def join_cluster(user, password):
     _auth(user, password)
+    time.sleep(1)
     _start()
+    time.sleep(1)
     _enable()
     return True
 
