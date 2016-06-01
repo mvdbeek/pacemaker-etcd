@@ -1,4 +1,5 @@
 import subprocess
+import tempfile
 import time
 import logging
 
@@ -48,6 +49,15 @@ def join_cluster(user, password):
     time.sleep(1)
     _enable()
     return True
+
+
+def load_config(conf):
+    """write conf to file and load with crm util"""
+    tmp = tempfile.NamedTemporaryFile(delete=False)
+    with open(tmp, "w") as conf_file:
+        conf_file.write(tmp)
+    load = ["crm", "configure", "load", "update", conf]
+    return subprocess.check_output(load)
 
 
 def _start():

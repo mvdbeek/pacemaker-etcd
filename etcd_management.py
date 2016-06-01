@@ -6,6 +6,7 @@ from pcs_cmds import authorize_new_node
 from pcs_cmds import bootstrap_cluster
 from pcs_cmds import change_pass
 from pcs_cmds import join_cluster
+from pcs_cmds import load_config
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -173,3 +174,11 @@ class CreateCluster(EtcdBase):
         success = bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
         if success:
             self.client.write("%s/nodelist" % self.prefix, value=self.ip)
+
+    def load_cib_config(self):
+        try:
+            conf = self.client.read("{prefix}/cib".format(prefix=self.prefix)).value
+            load_config(conf)
+        except etcd.EtcdKeyNotFound:
+            log.info("No CIB config found at {prefix}/cib".format(prefix=self.prefix))
+            pass
