@@ -1,21 +1,23 @@
 import etcd
 import logging
 import pcs_cmds
+import threading
+import time
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 log.addHandler(ch)
 
-
 class EtcdBase(object):
 
-    def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster"):
+    def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster", ttl=60):
         self.ip = ip
         self.host = host
         self.protocol = protocol
         self.allow_redirect = allow_redirect
         self.prefix = prefix
+        self.ttl = ttl
         self.client = etcd.Client(host=host, protocol=protocol, allow_reconnect=True, allow_redirect=allow_redirect)
 
     @property
@@ -82,14 +84,14 @@ class JoinOrCreateCluster(EtcdBase):
             log.info("Succesfully joined cluster")
 
     def make_request(self):
-        self.client.write(key="%s/%s" % (self.prefix, self.ip),
+        self.client.write(key="%s/nodes/%s" % (self.prefix, self.ip),
                           value="request_join",
                           ttl=120)
         return True
 
     def wait_for_request(self):
         log.info("Waiting for approval of IP")
-        watch = EtcdWatch(watch_key=self.ip,
+        watch = EtcdWatch(watch_key="nodes/%s" % self.ip,
                           ip=self.ip,
                           host=self.host,
                           protocol=self.protocol,
@@ -103,7 +105,7 @@ class JoinOrCreateCluster(EtcdBase):
         success = pcs_cmds.bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
         if success:
             self.load_cib_config()
-            self.client.write("%s/%s" % (self.prefix, self.ip), value="ready")
+            self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=self.ttl)
             return True
         return False
 
@@ -120,13 +122,25 @@ class WatchCluster(EtcdBase):
 
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)
+        try:
+            self.do_watch()
+        finally:
+            if self.am_member:
+                self.stop_signal()
+
+    def do_watch(self):
+        if not self.am_member:
+            time.sleep(1)
+            self.do_watch()
         while True:
+            self.stop_signal = self.send_alive_signal
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
                                    protocol=self.protocol,
                                    allow_redirect=self.allow_redirect,
-                                   prefix=self.prefix)
+                                   prefix=self.prefix,
+                                   recursive=True)
             ip = self.watch.result.key.split(self.prefix, 1)[-1].split("/")[-1]
             if self.watch.result.action == "expire":
                 pcs_cmds.remove_node(ip)
@@ -137,7 +151,23 @@ class WatchCluster(EtcdBase):
                 if self.am_member and value == "request_join":
                     success = pcs_cmds.authorize_new_node(user=self.user, password=self.password, node=self.watch.result.value)
                     if success:
-                        self.client.write("%s/%s" % (self.prefix, self.ip), value="ready")
+                        self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
+
+    def call_repeatedly(self, func, *args):
+        stopped = threading.Event()
+
+        def loop():
+            while not stopped.wait(15):  # the first call is in `interval` secs
+                func(*args)
+
+        t = threading.Thread(target=loop)
+        t.daemon = True
+        t.start()
+        return stopped.set
+
+    @call_repeatedly
+    def send_alive_signal(self):
+        self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
 
 
 class WatchPassword(EtcdBase):
