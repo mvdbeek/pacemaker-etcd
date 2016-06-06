@@ -1,9 +1,8 @@
 import etcd
 import logging
 import pcs_cmds
-import threading
 import time
-from alive import call_repeatedly
+from alive import send_alive_signal
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -134,7 +133,7 @@ class WatchCluster(EtcdBase):
             time.sleep(1)
             self.do_watch()
         while True:
-            self.stop_signal = self.send_alive_signal()
+            self.stop_signal = send_alive_signal(self.client, self.prefix, self.ip, self.ttl)
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -153,10 +152,7 @@ class WatchCluster(EtcdBase):
                     success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=self.watch.result.value)
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
-
-    @call_repeatedly
-    def send_alive_signal(self):
-        self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
+            self.stop_signal()
 
 
 class WatchPassword(EtcdBase):

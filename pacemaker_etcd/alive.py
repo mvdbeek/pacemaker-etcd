@@ -12,3 +12,8 @@ def call_repeatedly(func, *args):
     t.daemon = True
     t.start()
     return stopped.set
+
+
+@call_repeatedly
+def send_alive_signal(client, prefix, ip, ttl):
+    client.refresh("%s/nodes/%s" % (prefix, ip), ttl=ttl)
