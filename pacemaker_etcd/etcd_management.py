@@ -102,7 +102,7 @@ class JoinOrCreateCluster(EtcdBase):
         return False
 
     def create_new_cluster(self):
-        success = pcs_cmds.bootstrap_cluster(user=self.user, password=self.password, node=self.ip)
+        success = pcs_cmds.bootstrap_cluster(self, user=self.user, password=self.password, node=self.ip)
         if success:
             self.load_cib_config()
             self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=self.ttl)
@@ -143,13 +143,13 @@ class WatchCluster(EtcdBase):
                                    recursive=True)
             ip = self.watch.result.key.split(self.prefix, 1)[-1].split("/")[-1]
             if self.watch.result.action == "expire":
-                pcs_cmds.remove_node(ip)
+                pcs_cmds.remove_node(self, ip)
             else:
                 value = self.watch.result.value
                 if value == "ready":
                     continue
                 if self.am_member and value == "request_join":
-                    success = pcs_cmds.authorize_new_node(user=self.user, password=self.password, node=self.watch.result.value)
+                    success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=self.watch.result.value)
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
 

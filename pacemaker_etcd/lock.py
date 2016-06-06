@@ -7,7 +7,7 @@ def with_etcd_lock(func):
             lock = etcd.Lock(self.client, lock_name=func.__name__)
             lock.acquire(lock_ttl=120, blocking=False)
             if lock.is_acquired:
-                return func(self, *args, **kwargs)
+                return func(*args, **kwargs)
             else:
                 return False
         finally:
