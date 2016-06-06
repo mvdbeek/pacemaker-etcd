@@ -3,6 +3,7 @@ import logging
 import pcs_cmds
 import threading
 import time
+from alive import call_repeatedly
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
@@ -152,18 +153,6 @@ class WatchCluster(EtcdBase):
                     success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=self.watch.result.value)
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
-
-    def call_repeatedly(func, *args):
-        stopped = threading.Event()
-
-        def loop():
-            while not stopped.wait(15):  # the first call is in `interval` secs
-                func(*args)
-
-        t = threading.Thread(target=loop)
-        t.daemon = True
-        t.start()
-        return stopped.set
 
     @call_repeatedly
     def send_alive_signal(self):
