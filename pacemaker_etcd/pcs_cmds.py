@@ -2,6 +2,8 @@ import subprocess
 import tempfile
 import time
 import logging
+from contextlib import contextmanager
+from lock import with_etcd_lock
 
 
 log = logging.getLogger(__name__)
@@ -10,36 +12,55 @@ ch = logging.StreamHandler()
 log.addHandler(ch)
 
 
+@contextmanager
+def ignored(*exceptions):
+    try:
+        yield
+    except exceptions:
+        log.exception()
+        pass
+
+
 def change_pass(user, password):
-    process = subprocess.Popen(['chpasswd'], stdout=subprocess.PIPE, stdin=subprocess.PIPE,stderr=subprocess.PIPE)
+    process = subprocess.Popen(['chpasswd'], stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     process.communicate("{user}:{password}".format(user=user, password=password))
 
 
+@with_etcd_lock
 def bootstrap_cluster(user, password, node, name='Master'):
-    _auth(user, password, node)
-    time.sleep(1)
-    _setup(name, node)
-    time.sleep(1)
-    _start()
-    time.sleep(1)
-    _enable()
-    return True
+    with ignored(subprocess.CalledProcessError):
+        _auth(user, password, node)
+        time.sleep(1)
+        _setup(name, node)
+        time.sleep(1)
+        _start()
+        time.sleep(1)
+        _enable()
+        return True
 
 
+@with_etcd_lock
 def authorize_new_node(user, password, node):
-    _auth(user, password, node)
-    try:
-        _add(node)
-    except subprocess.CalledProcessError as e:
-        if "node is already in a cluster" in e.output or "Error connecting to" in e.output:
-            log.info("Removing node from cluster")
-            time.sleep(1)
-            _remove(node)
-            time.sleep(1)
+    with ignored(subprocess.CalledProcessError):
+        _auth(user, password, node)
+        try:
             _add(node)
-        else:
-            raise
-    return True
+        except subprocess.CalledProcessError as e:
+            if "node is already in a cluster" in e.output or "Error connecting to" in e.output:
+                log.exception("Removing node from cluster")
+                time.sleep(1)
+                _remove(node)
+                time.sleep(1)
+                _add(node)
+            else:
+                raise
+        return True
+
+
+@with_etcd_lock
+def remove_node(node):
+    with ignored(subprocess.CalledProcessError):
+        return _remove(node)
 
 
 def join_cluster(user, password):
@@ -83,7 +104,7 @@ def _add(node):
 
 
 def _remove(node):
-    remove = ["pcs", "cluster", "node", "remove", node ]
+    remove = ["pcs", "cluster", "node", "remove", node]
     return subprocess.check_output(remove)
 
 
