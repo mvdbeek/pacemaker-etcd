@@ -2,12 +2,13 @@ import etcd
 import logging
 import pcs_cmds
 import time
-from alive import send_alive_signal
+from alive import RepeatedTimer
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 log.addHandler(ch)
+
 
 class EtcdBase(object):
 
@@ -126,14 +127,14 @@ class WatchCluster(EtcdBase):
             self.do_watch()
         finally:
             if self.am_member:
-                self.stop_signal()
+                self.timer.stop()
 
     def do_watch(self):
         if not self.am_member:
             time.sleep(1)
             self.do_watch()
         while True:
-            self.stop_signal = send_alive_signal(self.client, self.prefix, self.ip, self.ttl)
+            self.timer = RepeatedTimer(15, self.send_alive_signal())
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -152,7 +153,9 @@ class WatchCluster(EtcdBase):
                     success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=self.watch.result.value)
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
-            self.stop_signal()
+
+    def send_alive_signal(self):
+        self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
 
 
 class WatchPassword(EtcdBase):
