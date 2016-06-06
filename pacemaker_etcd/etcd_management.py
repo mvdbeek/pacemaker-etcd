@@ -133,7 +133,7 @@ class WatchCluster(EtcdBase):
             time.sleep(1)
             self.do_watch()
         while True:
-            self.stop_signal = self.send_alive_signal
+            self.stop_signal = self.send_alive_signal()
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -153,7 +153,7 @@ class WatchCluster(EtcdBase):
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
 
-    def call_repeatedly(self, func, *args):
+    def call_repeatedly(func, *args):
         stopped = threading.Event()
 
         def loop():
