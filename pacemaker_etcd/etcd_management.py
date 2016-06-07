@@ -156,8 +156,9 @@ class WatchCluster(EtcdBase):
                 getattr(self, self.watch.result.value)()
 
     def process_backlog(self):
-        [self.request_join(child.key) for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
+        keys = [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
          if child.value == "request_join"]
+        self.request_join(keys=keys)
         return True
 
     def send_alive_signal(self):
@@ -168,15 +169,15 @@ class WatchCluster(EtcdBase):
     def ready(self):
         return True
 
-    def request_join(self, key=None):
+    def request_join(self, keys=None):
         if self.am_member:
-            if not key:
-                key = self.watch.result.key
-            ip = self.key_to_ip(key)
-            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
+            if not keys:
+                keys = [self.watch.result.key]
+            ips = [ self.key_to_ip(key) for key in keys ]
+            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=" ".join(ips))
             if success:
-                log.info("Successfully authorized node %s" % ip)
-                self.client.write(key, value='ready', ttl=self.ttl)
+                log.info("Successfully authorized nodes %s" % " ".join(ips))
+                [ self.client.write(key, value='ready', ttl=self.ttl) for key in keys]
                 return True
 
     def expire(self):
