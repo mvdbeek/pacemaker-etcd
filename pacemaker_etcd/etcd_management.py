@@ -129,6 +129,7 @@ class WatchCluster(EtcdBase):
 
     def __init__(self, **kwargs):
         EtcdBase.__init__(self, **kwargs)
+        self.callable = []
         try:
             self.do_watch()
         finally:
@@ -141,6 +142,7 @@ class WatchCluster(EtcdBase):
             self.do_watch()
         while True:
             self.timer = RepeatedTimer(15, self.send_alive_signal)
+            # Process backlog
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -148,22 +150,34 @@ class WatchCluster(EtcdBase):
                                    allow_redirect=self.allow_redirect,
                                    prefix=self.prefix,
                                    recursive=True)
-            ip = self.key_to_ip(self.watch.result.key)
             if self.watch.result.action == "expire":
-                pcs_cmds.remove_node(self, ip)
+                self.expire()
             else:
-                value = self.watch.result.value
-                if value == "ready":
-                    continue
-                if self.am_member and value == "request_join":
-                    success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
-                    if success:
-                        log.info("Successfully authorized node %s" % ip)
-                        self.client.write(self.watch.result.key, value='ready', ttl=self.ttl)
+                getattr(self, self.watch.result.value)()
 
     def send_alive_signal(self):
         log.info("Sending alive signal")
         self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
+
+    def ready(self):
+        return True
+
+    def request_join(self):
+        if self.am_member:
+            ip = self.key_to_ip(self.watch.result.key)
+            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
+            if success:
+                log.info("Successfully authorized node %s" % ip)
+                self.client.write(self.watch.result.key, value='ready', ttl=self.ttl)
+                return True
+
+    def expire(self):
+        ip = self.key_to_ip(self.watch.result.key)
+        log.info("Removing node %s" % ip)
+        pcs_cmds.remove_node(self, ip)
+        return True
+
+
 
 
 class WatchPassword(EtcdBase):
