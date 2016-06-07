@@ -174,6 +174,7 @@ class WatchCluster(EtcdBase):
             if not keys:
                 keys = [self.watch.result.key]
             ips = [ self.key_to_ip(key) for key in keys ]
+            time.sleep(1)
             success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=" ".join(ips))
             if success:
                 log.info("Successfully authorized nodes %s" % " ".join(ips))
