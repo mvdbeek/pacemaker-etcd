@@ -156,7 +156,7 @@ class WatchCluster(EtcdBase):
                 if value == "ready":
                     continue
                 if self.am_member and value == "request_join":
-                    success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=self.watch.result.value)
+                    success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
                     if success:
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
 
