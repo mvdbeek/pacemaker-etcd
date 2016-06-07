@@ -91,8 +91,7 @@ def _auth(user, password, node=None):
 
 def _add(node):
     add = ['pcs', 'cluster', 'node', 'add']
-    add.extend(node)
-    return subprocess.check_output(add, stderr=subprocess.STDOUT)
+    return [subprocess.check_output(add+[n], stderr=subprocess.STDOUT) for n in node]
 
 
 def localnode_remove(node):
