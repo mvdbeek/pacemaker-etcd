@@ -178,8 +178,6 @@ class WatchCluster(EtcdBase):
         return True
 
 
-
-
 class WatchPassword(EtcdBase):
     """
     Watches for changes in /password  and updates the password

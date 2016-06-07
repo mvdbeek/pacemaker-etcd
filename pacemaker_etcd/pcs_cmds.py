@@ -45,7 +45,7 @@ def authorize_new_node(user, password, node):
         _auth(user, password, node)
         try:
             _add(node)
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError as e:  # I don't think we need this procedure anymore
             if "node is already in a cluster" in e.output or "Error connecting to" in e.output:
                 log.exception("Removing node from cluster")
                 time.sleep(1)
@@ -57,10 +57,11 @@ def authorize_new_node(user, password, node):
         return True
 
 
-@with_etcd_lock
 def remove_node(node):
     with ignored(subprocess.CalledProcessError):
-        return _remove(node)
+        localnode_remove(node)
+        time.sleep(1)  # may need to actually check if the other nodes have completed this step
+        corosync_remove(node)
 
 
 def join_cluster(user, password):
@@ -101,6 +102,19 @@ def _auth(user, password, node=None):
 def _add(node):
     add = ['pcs', 'cluster', 'node', 'add', node]
     return subprocess.check_output(add, stderr=subprocess.STDOUT)
+
+
+def localnode_remove(node):
+    rm = ['pcs', 'cluster', 'localnode', 'remove', node]
+    return subprocess.check_output(rm)
+
+
+@with_etcd_lock
+def corosync_remove(node):
+    pcs_reload = ["pcs", "cluster", "reload", "corosync"]
+    subprocess.check_output(pcs_reload)
+    crm_rm = ['crm_node', '-R', node, '--force']
+    return subprocess.check_output(crm_rm)
 
 
 def _remove(node):
