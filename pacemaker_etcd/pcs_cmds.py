@@ -17,7 +17,7 @@ def ignored(*exceptions):
     try:
         yield
     except exceptions:
-        log.exception()
+        log.exception("An exception occured:")
         pass
 
 
