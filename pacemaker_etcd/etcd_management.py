@@ -108,7 +108,7 @@ class JoinOrCreateCluster(EtcdBase):
         return False
 
     def create_new_cluster(self):
-        success = pcs_cmds.bootstrap_cluster(self, user=self.user, password=self.password, node=[self.ip])
+        success = pcs_cmds.bootstrap_cluster(self, user=self.user, password=self.password, node=self.ip)
         if success:
             self.load_cib_config()
             self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=self.ttl)
@@ -135,6 +135,8 @@ class WatchCluster(EtcdBase):
         finally:
             if hasattr(self, 'timer'):
                 self.timer.stop()
+            if hasattr(self, 'backlog'):
+                self.backlog.stop()
 
     def do_watch(self):
         if not self.am_member:
@@ -142,7 +144,7 @@ class WatchCluster(EtcdBase):
             self.do_watch()
         while True:
             self.timer = RepeatedTimer(15, self.send_alive_signal)
-            self.process_backlog()
+            self.backlog = RepeatedTimer(5, self.process_backlog)
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -159,7 +161,9 @@ class WatchCluster(EtcdBase):
         keys = [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
          if child.value == "request_join"]
         if keys:
-            self.request_join(keys=keys)
+            for key in keys:
+                self.request_join(key=key)
+                time.sleep(5)
         return True
 
     def send_alive_signal(self):
@@ -170,22 +174,21 @@ class WatchCluster(EtcdBase):
     def ready(self):
         return True
 
-    def request_join(self, keys=None):
+    def request_join(self, key=None):
         if self.am_member:
-            if not keys:
-                keys = [self.watch.result.key]
-            ips = [ self.key_to_ip(key) for key in keys ]
-            time.sleep(1)
-            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ips)
+            if not key:
+                key = self.watch.result.key
+            ip = self.key_to_ip(key)
+            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
             if success:
-                log.info("Successfully authorized nodes %s" % " ".join(ips))
-                [ self.client.write(key, value='ready', ttl=self.ttl) for key in keys]
+                log.info("Successfully authorized nodes %s" % ip)
+                self.client.write(key, value='ready', ttl=self.ttl)
                 return True
 
     def expire(self):
         ip = self.key_to_ip(self.watch.result.key)
         log.info("Removing node %s" % ip)
-        pcs_cmds.remove_node(self, [ip])
+        pcs_cmds.remove_node(self, ip)
         return True
 
 

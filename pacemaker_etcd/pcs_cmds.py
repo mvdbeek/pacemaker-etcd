@@ -85,18 +85,17 @@ def _enable():
 def _auth(user, password, node=None):
     auth = ['pcs', 'cluster', 'auth', '-u', user, '-p', password]
     if node:
-        auth.extend(node)
+        auth.append(node)
     return subprocess.check_output(auth)
 
 
 def _add(node):
-    add = ['pcs', 'cluster', 'node', 'add']
-    return [subprocess.check_output(add+[n], stderr=subprocess.STDOUT) for n in node]
+    add = ['pcs', 'cluster', 'node', 'add', node]
+    return subprocess.check_output(add, stderr=subprocess.STDOUT)
 
 
 def localnode_remove(node):
-    rm = ['pcs', 'cluster', 'localnode', 'remove']
-    rm.extend(node)
+    rm = ['pcs', 'cluster', 'localnode', 'remove', node]
     return subprocess.check_output(rm)
 
 
@@ -104,19 +103,15 @@ def localnode_remove(node):
 def corosync_remove(node):
     pcs_reload = ["pcs", "cluster", "reload", "corosync"]
     subprocess.check_output(pcs_reload)
-    crm_rm = ['crm_node', '-R',]
-    crm_rm.extend(node)
-    crm_rm.append('--force')
+    crm_rm = ['crm_node', '-R', node, '--force']
     return subprocess.check_output(crm_rm)
 
 
 def _remove(node):
-    remove = ["pcs", "cluster", "node", "remove"]
-    remove.extend(node)
+    remove = ["pcs", "cluster", "node", "remove", node]
     return subprocess.check_output(remove)
 
 
 def _setup(name, node):
-    setup = ['pcs', 'cluster', 'setup', '--name', name]
-    setup.extend(node)
+    setup = ['pcs', 'cluster', 'setup', '--name', name, node]
     return subprocess.check_output(setup)
