@@ -140,7 +140,7 @@ class WatchCluster(EtcdBase):
             time.sleep(1)
             self.do_watch()
         while True:
-            self.timer = RepeatedTimer(15, self.send_alive_signal())
+            self.timer = RepeatedTimer(15, self.send_alive_signal)
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
