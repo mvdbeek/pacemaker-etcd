@@ -108,7 +108,7 @@ class JoinOrCreateCluster(EtcdBase):
         return False
 
     def create_new_cluster(self):
-        success = pcs_cmds.bootstrap_cluster(self, user=self.user, password=self.password, node=self.ip)
+        success = pcs_cmds.bootstrap_cluster(self, user=self.user, password=self.password, node=[self.ip])
         if success:
             self.load_cib_config()
             self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=self.ttl)
@@ -175,7 +175,7 @@ class WatchCluster(EtcdBase):
                 keys = [self.watch.result.key]
             ips = [ self.key_to_ip(key) for key in keys ]
             time.sleep(1)
-            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=" ".join(ips))
+            success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ips)
             if success:
                 log.info("Successfully authorized nodes %s" % " ".join(ips))
                 [ self.client.write(key, value='ready', ttl=self.ttl) for key in keys]
@@ -184,7 +184,7 @@ class WatchCluster(EtcdBase):
     def expire(self):
         ip = self.key_to_ip(self.watch.result.key)
         log.info("Removing node %s" % ip)
-        pcs_cmds.remove_node(self, ip)
+        pcs_cmds.remove_node(self, [ip])
         return True
 
 

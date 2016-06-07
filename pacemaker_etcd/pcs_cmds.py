@@ -43,17 +43,7 @@ def bootstrap_cluster(user, password, node, name='Master'):
 def authorize_new_node(user, password, node):
     with ignored(subprocess.CalledProcessError):
         _auth(user, password, node)
-        try:
-            _add(node)
-        except subprocess.CalledProcessError as e:  # I don't think we need this procedure anymore
-            if "node is already in a cluster" in e.output or "Error connecting to" in e.output:
-                log.exception("Removing node from cluster")
-                time.sleep(1)
-                _remove(node)
-                time.sleep(1)
-                _add(node)
-            else:
-                raise
+        _add(node)
         return True
 
 
@@ -95,17 +85,19 @@ def _enable():
 def _auth(user, password, node=None):
     auth = ['pcs', 'cluster', 'auth', '-u', user, '-p', password]
     if node:
-        auth.append(node)
+        auth.extend(node)
     return subprocess.check_output(auth)
 
 
 def _add(node):
-    add = ['pcs', 'cluster', 'node', 'add', node]
+    add = ['pcs', 'cluster', 'node', 'add']
+    add.extend(node)
     return subprocess.check_output(add, stderr=subprocess.STDOUT)
 
 
 def localnode_remove(node):
-    rm = ['pcs', 'cluster', 'localnode', 'remove', node]
+    rm = ['pcs', 'cluster', 'localnode', 'remove']
+    rm.extend(node)
     return subprocess.check_output(rm)
 
 
@@ -113,15 +105,19 @@ def localnode_remove(node):
 def corosync_remove(node):
     pcs_reload = ["pcs", "cluster", "reload", "corosync"]
     subprocess.check_output(pcs_reload)
-    crm_rm = ['crm_node', '-R', node, '--force']
+    crm_rm = ['crm_node', '-R',]
+    crm_rm.extend(node)
+    crm_rm.append('--force')
     return subprocess.check_output(crm_rm)
 
 
 def _remove(node):
-    remove = ["pcs", "cluster", "node", "remove", node]
+    remove = ["pcs", "cluster", "node", "remove"]
+    remove.extend(node)
     return subprocess.check_output(remove)
 
 
 def _setup(name, node):
-    setup = ['pcs', 'cluster', 'setup', '--name', name, node]
+    setup = ['pcs', 'cluster', 'setup', '--name', name]
+    setup.extend(node)
     return subprocess.check_output(setup)
