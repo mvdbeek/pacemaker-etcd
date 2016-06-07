@@ -57,11 +57,11 @@ def authorize_new_node(user, password, node):
         return True
 
 
-def remove_node(node):
+def remove_node(self, node):  # need self for with_etcd_lock decorator :/
     with ignored(subprocess.CalledProcessError):
         localnode_remove(node)
         time.sleep(1)  # may need to actually check if the other nodes have completed this step
-        corosync_remove(node)
+        corosync_remove(self, node)
 
 
 def join_cluster(user, password):
