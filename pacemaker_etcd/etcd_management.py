@@ -62,7 +62,7 @@ class EtcdWatch(EtcdBase):
             result = self.client.watch(self.key, timeout=timeout, recursive=recursive)
         except etcd.EtcdWatchTimedOut:
             result = self.watch(timeout=timeout, recursive=recursive)
-        log.info("Value of key '%s' changed to '%s'" % (self.key, result.value ))
+        log.info("Value of key '%s' changed to '%s'" % (self.key, result.value))
         return result
 
 
