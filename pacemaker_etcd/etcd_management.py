@@ -158,7 +158,8 @@ class WatchCluster(EtcdBase):
                 if self.am_member and value == "request_join":
                     success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
                     if success:
-                        self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
+                        log.info("Successfully authorized node %s" % ip)
+                        self.client.write(self.watch.result.key, value='ready', ttl=self.ttl)
 
     def send_alive_signal(self):
         log.info("Sending alive signal")
