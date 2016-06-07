@@ -142,7 +142,7 @@ class WatchCluster(EtcdBase):
             self.do_watch()
         while True:
             self.timer = RepeatedTimer(15, self.send_alive_signal)
-            # Process backlog
+            self.process_backlog()
             self.watch = EtcdWatch(watch_key='nodes',
                                    ip=self.ip,
                                    host=self.host,
@@ -155,20 +155,28 @@ class WatchCluster(EtcdBase):
             else:
                 getattr(self, self.watch.result.value)()
 
+    def process_backlog(self):
+        [self.request_join(child.key) for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
+         if child.value == "request_join"]
+        return True
+
     def send_alive_signal(self):
         log.info("Sending alive signal")
         self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
+        return True
 
     def ready(self):
         return True
 
-    def request_join(self):
+    def request_join(self, key=None):
         if self.am_member:
-            ip = self.key_to_ip(self.watch.result.key)
+            if not key:
+                key = self.watch.result.key
+            ip = self.key_to_ip(key)
             success = pcs_cmds.authorize_new_node(self, user=self.user, password=self.password, node=ip)
             if success:
                 log.info("Successfully authorized node %s" % ip)
-                self.client.write(self.watch.result.key, value='ready', ttl=self.ttl)
+                self.client.write(key, value='ready', ttl=self.ttl)
                 return True
 
     def expire(self):
