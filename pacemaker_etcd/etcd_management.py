@@ -158,7 +158,8 @@ class WatchCluster(EtcdBase):
     def process_backlog(self):
         keys = [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
          if child.value == "request_join"]
-        self.request_join(keys=keys)
+        if keys:
+            self.request_join(keys=keys)
         return True
 
     def send_alive_signal(self):
