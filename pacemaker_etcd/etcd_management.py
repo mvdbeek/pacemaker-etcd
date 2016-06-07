@@ -54,10 +54,12 @@ class EtcdWatch(EtcdBase):
         self.result = self.watch(timeout=timeout, recursive=recursive)
 
     def watch(self, timeout, recursive):
+        log.info("Watching key '%s'" % (self.key))
         try:
             result = self.client.watch(self.key, timeout=timeout, recursive=recursive)
         except etcd.EtcdWatchTimedOut:
             result = self.watch(timeout=timeout, recursive=recursive)
+        log.info("Value of key '%s' changed to '%s'" % (self.key, result.value ))
         return result
 
 
@@ -107,6 +109,7 @@ class JoinOrCreateCluster(EtcdBase):
         if success:
             self.load_cib_config()
             self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=self.ttl)
+            log.info('Successfully created cluster')
             return True
         return False
 
@@ -155,6 +158,7 @@ class WatchCluster(EtcdBase):
                         self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value='ready', ttl=self.ttl)
 
     def send_alive_signal(self):
+        log.info("Sending alive signal")
         self.client.refresh("%s/nodes/%s" % (self.prefix, self.ip), ttl=self.ttl)
 
 
