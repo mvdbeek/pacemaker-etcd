@@ -27,8 +27,8 @@ class EtcdBase(object):
 
     @property
     def members(self):
-        return [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
-                if not child.dir and child.value == "ready"]
+        return [self.key_to_ip(child.key) for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
+                if child.value == "ready"]
 
     @property
     def password(self):
@@ -44,6 +44,9 @@ class EtcdBase(object):
             return True
         else:
             return False
+
+    def key_to_ip(self, key):
+        return key.split(self.prefix, 1)[-1].split("/")[-1]
 
 
 class EtcdWatch(EtcdBase):
@@ -129,7 +132,7 @@ class WatchCluster(EtcdBase):
         try:
             self.do_watch()
         finally:
-            if self.am_member:
+            if hasattr(self, 'timer'):
                 self.timer.stop()
 
     def do_watch(self):
@@ -145,7 +148,7 @@ class WatchCluster(EtcdBase):
                                    allow_redirect=self.allow_redirect,
                                    prefix=self.prefix,
                                    recursive=True)
-            ip = self.watch.result.key.split(self.prefix, 1)[-1].split("/")[-1]
+            ip = self.key_to_ip(self.watch.result.key)
             if self.watch.result.action == "expire":
                 pcs_cmds.remove_node(self, ip)
             else:
