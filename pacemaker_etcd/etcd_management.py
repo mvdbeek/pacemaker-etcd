@@ -193,6 +193,12 @@ class WatchCluster(EtcdBase):
         pcs_cmds.remove_node(self, ip)
         return True
 
+class RemoveSelf(EtcdBase):
+
+    def __init__(self, **kwargs):
+        EtcdBase.__init__(self, **kwargs)
+        self.client.write("%s/nodes/%s" % (self.prefix, self.ip), value="ready", ttl=1)
+
 
 class WatchPassword(EtcdBase):
     """

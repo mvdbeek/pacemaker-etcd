@@ -5,6 +5,7 @@ import sys
 from etcd_management import WatchCluster
 from etcd_management import JoinOrCreateCluster
 from etcd_management import WatchPassword
+from etcd_management import RemoveSelf
 
 
 class EnvDefault(argparse.Action):
@@ -29,7 +30,8 @@ class PcsEtcdArgs(object):
             usage='''pcs_etcd.py <command> [<args>]
 
    join_or_create       Join or create a new cluster from scratch
-   watch                Monitor etcd directory for requests from new nodes
+   watch                Monitor etcd directory for requests from new nodes.
+                        When cancelled will remove itself from the nodelist.
    watch_pass           Watch /prefix/password for changes and update password
 ''')
         parser.add_argument('command', help='Subcommand to run')
@@ -73,7 +75,10 @@ class PcsEtcdArgs(object):
         # now that we're inside a subcommand, ignore the first
         # TWO argvs, ie the command and the subcommand
         args = parser.parse_args(sys.argv[2:])
-        WatchCluster(ip=args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        try:
+            WatchCluster(ip=args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
+        finally:
+            RemoveSelf(ip=args.my_ip, host=args.etcd_nodes, protocol=args.protocol, prefix=args.prefix)
 
     def watch_pass(self):
         parser = argparse.ArgumentParser(
