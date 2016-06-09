@@ -57,7 +57,7 @@ class EtcdWatch(EtcdBase):
         self.result = self.watch(timeout=timeout, recursive=recursive)
 
     def watch(self, timeout, recursive):
-        log.info("Watching key '%s'" % (self.key))
+        log.info("Watching key '%s'" % self.key)
         try:
             result = self.client.watch(self.key, timeout=timeout, recursive=recursive)
         except etcd.EtcdWatchTimedOut:
@@ -161,7 +161,7 @@ class WatchCluster(EtcdBase):
 
     def process_backlog(self):
         keys = [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
-         if child.value == "request_join"]
+                if child.value == "request_join"]
         if keys:
             for key in keys:
                 self.request_join(key=key)
@@ -192,6 +192,7 @@ class WatchCluster(EtcdBase):
         log.info("Removing node %s" % ip)
         pcs_cmds.remove_node(self, ip)
         return True
+
 
 class RemoveSelf(EtcdBase):
 
