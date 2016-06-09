@@ -156,6 +156,8 @@ class WatchCluster(EtcdBase):
                 self.expire()
             else:
                 getattr(self, self.watch.result.value)()
+            self.timer.stop()
+            self.backlog.stop()
 
     def process_backlog(self):
         keys = [child.key for child in self.client.read("%s/nodes" % self.prefix, recursive=True).children
