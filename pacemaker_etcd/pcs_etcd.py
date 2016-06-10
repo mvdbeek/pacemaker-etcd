@@ -49,7 +49,8 @@ class PcsEtcdArgs(object):
         parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument('--etcd_nodes', type=self.hosts,
                             action=EnvDefault, envvar="ETCD",
-                            help='Etcd cluster connection, e.g 127.0.0.1:4001')
+                            help='Etcd cluster connection, e.g 127.0.0.1:4001. '
+                                 'Provide multiple etcd nodes separated by commas')
         parser.add_argument('--my_ip', action=EnvDefault, envvar="MY_IP",
                             help='IP of current node to join pacemaker cluster')
         parser.add_argument('--protocol', default='http', help='Protocol to use to connect to etcd')
@@ -57,15 +58,25 @@ class PcsEtcdArgs(object):
         return parser
 
     def hosts(self, s):
+        """
+        Returns tuple of tuples of the form ((host1, port1), (host2, port2)) from s.
+
+        >>> s = "localhost:2379,localhost2:2379"
+        >>> hosts(object, s) == (('localhost', 2379), ('localhost2', 2379))
+        True
+        """
+        s=s.strip()
         try:
-            if ' ' in s:
+            if ',' in s:
+                hosts_ports = [host_port.split(':') for host_port in s.split(',')]
+            elif ' ' in s:
                 hosts_ports = [host_port.split(':') for host_port in s.split(' ')]
             else:
                 hosts_ports = [s.split(':')]
             hosts = tuple(((host_port[0], int(host_port[1])) for host_port in hosts_ports),)
             return hosts
         except:
-            raise argparse.ArgumentTypeError("Nodes must be defined as <ip:port>")
+            raise argparse.ArgumentTypeError("Nodes must be defined as <ip:port> or <ip2:port2,ip2:port2>")
 
     def watch(self):
         parser = argparse.ArgumentParser(
