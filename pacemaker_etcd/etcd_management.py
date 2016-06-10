@@ -12,14 +12,18 @@ log.addHandler(ch)
 
 class EtcdBase(object):
 
-    def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster", ttl=60):
+    def __init__(self, ip, host, protocol, allow_redirect=True, prefix="/hacluster", ttl=60, read_timeout=None):
         self.ip = ip
         self.host = host
         self.protocol = protocol
         self.allow_redirect = allow_redirect
         self.prefix = prefix
         self.ttl = ttl
-        self.client = etcd.Client(host=host, protocol=protocol, allow_reconnect=True, allow_redirect=allow_redirect)
+        self.client = etcd.Client(host=host,
+                                  protocol=protocol,
+                                  allow_reconnect=True,
+                                  allow_redirect=allow_redirect,
+                                  read_timeout=read_timeout)
 
     @property
     def user(self):
@@ -58,10 +62,7 @@ class EtcdWatch(EtcdBase):
 
     def watch(self, timeout, recursive):
         log.info("Watching key '%s'" % self.key)
-        try:
-            result = self.client.watch(self.key, timeout=timeout, recursive=recursive)
-        except etcd.EtcdWatchTimedOut:
-            result = self.watch(timeout=timeout, recursive=recursive)
+        result = self.client.watch(self.key, timeout=timeout, recursive=recursive)
         log.info("Value of key '%s' changed to '%s'" % (self.key, result.value))
         return result
 
